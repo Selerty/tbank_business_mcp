@@ -14,6 +14,53 @@
 
 MCP не подписывает и не отправляет платежи и не переводит деньги. В production создание черновика всё же добавляет документ в банковский кабинет и требует отдельного scope токена.
 
+## Параметры методов
+
+### `list_accounts`
+
+- `with_invest: bool = false` — включить инвестиционные счета в ответ.
+- Возвращает счета, типы, статусы и доступные API остатки.
+
+### `get_company_info`
+
+Аргументов нет. Возвращает сведения о компании и её реквизитах в рамках прав токена.
+
+### `get_statement`
+
+- `account_number` — 20-значный номер счёта.
+- `from_date` — начало периода ISO 8601, включительно.
+- `to_date: str | null = null` — конец периода, не включается.
+- `operation_status: str = "All"` — `All`, `Authorization` или `Transaction`.
+- `limit: int = 1000` — 1–5000 операций на страницу.
+- `cursor: str | null = null` — `nextCursor` из предыдущего ответа.
+- `with_balances: bool = true` — вернуть балансы на первой странице.
+- `categories: list[str] | null = null` — фильтр по категориям.
+- `inns: list[str] | null = null` — фильтр по ИНН контрагентов.
+
+### `summarize_statement`
+
+- `account_number`, `from_date`, `to_date` — счёт и интервал ISO 8601; конечная дата не включается.
+- `operation_status: str = "Transaction"` — `All`, `Authorization` или `Transaction`.
+- Автоматически проходит страницы до 20 × 5000 операций и возвращает количество, суммы зачислений/списаний, чистое изменение, разрез по категориям и балансы. Ответ не содержит назначений платежей и реквизитов контрагентов. Поле `truncated` показывает, достигнут ли лимит страниц.
+
+### `get_payment_document`
+
+- `account_number` — номер счёта.
+- `operation_id` — UUID операции из выписки.
+- `operation_date` — дата операции `YYYY-MM-DD`.
+- Возвращает подтверждающий документ исполненной операции в Base64 (PDF).
+
+### `get_payment_draft_status`
+
+- `document_ids: list[str]` — от 1 до 100 идентификаторов документов.
+- Запрашивает статусы документов; метод не меняет их состояние.
+
+### `create_payment_draft`
+
+- Обязательные поля: `document_number`, `amount`, `recipient_name`, `recipient_inn`, `recipient_kpp`, `recipient_account`, `recipient_bik`, `account_number`, `payment_purpose`.
+- Дополнительные поля: `execution_date: str | null = null`, `execution_order: int = 5` (1–5), налоговые поля по умолчанию равны строке `"0"` для обычного неналогового перевода.
+- В sandbox создаётся только тестовый черновик. В production документ появится в банковском кабинете, но не будет подписан или отправлен; токену нужен scope создания черновиков.
+
 ## Требования
 
 - Python 3.11+
@@ -94,3 +141,13 @@ security add-generic-password -U -a "$USER" -s tbank-business-api-token -w
 - Все методы доступны в обоих профилях. В production `create_payment_draft` требует дополнительный scope и создаёт документ в кабинете, но не подписывает и не отправляет его.
 
 Документация: [T-API](https://developer.tbank.ru/docs/api/t-api), [песочница](https://developer.tbank.ru/docs/intro/other/sandbox), [счета и выписки](https://developer.tbank.ru/docs/api/scheta-i-vipiski), [подтверждающий документ](https://developer.tbank.ru/docs/api/get-api-v-1-payment-document), [информация о компании](https://developer.tbank.ru/docs/api/get-api-v-1-company), [черновик платежа](https://developer.tbank.ru/docs/api/post-api-v-1-payment-create), [статусы платежных документов](https://developer.tbank.ru/docs/api/payment-status).
+
+## Проверки
+
+Локальные проверки без банковских запросов:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Проверка API-контрактов выполняется через профиль `tbank-business-sandbox`; песочница возвращает тестовые данные и не затрагивает production.
