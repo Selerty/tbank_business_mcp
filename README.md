@@ -39,8 +39,8 @@ chmod +x scripts/run-with-keychain.sh
 
 ```toml
 [mcp_servers.tbank-business]
-command = "/path/to/tbank_business_mcp/scripts/run-with-keychain.sh"
-args = []
+command = "/bin/sh"
+args = ["/path/to/tbank_business_mcp/scripts/run-with-keychain.sh"]
 ```
 
 Замените `/path/to/tbank_business_mcp` в примерах на фактический путь, куда вы клонировали репозиторий.
@@ -48,7 +48,7 @@ args = []
 Либо выполните команду Codex CLI:
 
 ```bash
-codex mcp add tbank-business -- /path/to/tbank_business_mcp/scripts/run-with-keychain.sh
+codex mcp add tbank-business -- /bin/sh /path/to/tbank_business_mcp/scripts/run-with-keychain.sh
 ```
 
 Для Claude Desktop соответствующая запись выглядит так:
@@ -57,7 +57,8 @@ codex mcp add tbank-business -- /path/to/tbank_business_mcp/scripts/run-with-key
 {
   "mcpServers": {
     "tbank-business": {
-      "command": "/path/to/tbank_business_mcp/scripts/run-with-keychain.sh"
+      "command": "/bin/sh",
+      "args": ["/path/to/tbank_business_mcp/scripts/run-with-keychain.sh"]
     }
   }
 }
