@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import ssl
@@ -14,6 +15,8 @@ from urllib.parse import urlparse
 import httpx
 import truststore
 from mcp.server.fastmcp import FastMCP
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 API_BASE_URL = os.getenv(
