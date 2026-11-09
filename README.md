@@ -10,9 +10,9 @@
 - `summarize_statement` — сводка за период: зачисления, списания, чистое изменение и суммы по категориям.
 - `get_payment_document` — PDF-подтверждение исполненной операции из выписки.
 - `get_payment_draft_status` — статус документа по `documentId`.
-- `create_payment_draft` — тестовый черновик доступен только в sandbox профиле; в production профиль этот инструмент не регистрируется.
+- `create_payment_draft` — создать черновик в выбранном контуре. В sandbox он тестовый; в production появляется в банковском кабинете. Инструмент не подписывает и не отправляет платёж.
 
-Production профиль предназначен только для чтения. Он не содержит методов создания, подписания или отправки платежей.
+MCP не подписывает и не отправляет платежи и не переводит деньги. В production создание черновика всё же добавляет документ в банковский кабинет и требует отдельного scope токена.
 
 ## Требования
 
@@ -22,7 +22,7 @@ Production профиль предназначен только для чтен�
 
 ## Настройка на macOS
 
-Для production профиля выпустите T-API токен с правами только на чтение счетов и операций. Создание черновиков отключено в production профиле.
+Для просмотра выпустите T-API токен с правами на чтение счетов и операций. Для `create_payment_draft` в production дополнительно нужен scope создания черновиков; не добавляйте его, если функция не нужна.
 
 Сохраните токен в macOS Keychain. Команда запросит значение интерактивно и не поместит его в историю оболочки:
 
@@ -91,6 +91,6 @@ security add-generic-password -U -a "$USER" -s tbank-business-api-token -w
 
 - Production base URL: `https://business.tbank.ru/openapi/api`; Bearer-токен из Keychain.
 - Sandbox base URL: `https://business.tbank.ru/openapi/sandbox/api`; публичный тестовый Bearer-токен.
-- Создание черновика доступно только в sandbox и не подписывает/не отправляет платёж.
+- Все методы доступны в обоих профилях. В production `create_payment_draft` требует дополнительный scope и создаёт документ в кабинете, но не подписывает и не отправляет его.
 
 Документация: [T-API](https://developer.tbank.ru/docs/api/t-api), [песочница](https://developer.tbank.ru/docs/intro/other/sandbox), [счета и выписки](https://developer.tbank.ru/docs/api/scheta-i-vipiski), [подтверждающий документ](https://developer.tbank.ru/docs/api/get-api-v-1-payment-document), [информация о компании](https://developer.tbank.ru/docs/api/get-api-v-1-company), [черновик платежа](https://developer.tbank.ru/docs/api/post-api-v-1-payment-create), [статусы платежных документов](https://developer.tbank.ru/docs/api/payment-status).

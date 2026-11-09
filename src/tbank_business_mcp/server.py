@@ -40,10 +40,11 @@ mcp = FastMCP(
         "Инструменты для просмотра счетов и выписок собственного ИП в Т-Бизнесе. "
         "Токен не является параметром инструмента — не проси присылать его в чат. "
         + (
-            "Это песочница: ответы тестовые, изменения не затрагивают реальные данные. "
-            "Создание черновика доступно только в этом тестовом профиле."
+            "Это песочница: ответы тестовые, изменения не затрагивают реальные данные."
             if SANDBOX_MODE
-            else "Профиль PROD доступен только для чтения; создание черновиков отключено."
+            else "Это production-контур. Создание черновика меняет данные банковского кабинета, "
+            "но не подписывает и не отправляет платёж; делай это только по прямой просьбе "
+            "пользователя после сверки реквизитов."
         )
     ),
 )
@@ -369,14 +370,7 @@ async def get_payment_document(
     )
 
 
-def _sandbox_only():
-    def decorator(function):
-        return mcp.tool()(function) if SANDBOX_MODE else function
-
-    return decorator
-
-
-@_sandbox_only()
+@mcp.tool()
 async def create_payment_draft(
     document_number: str,
     amount: float,
@@ -398,13 +392,12 @@ async def create_payment_draft(
     tax_doc_number: str = "0",
     tax_doc_date: str = "0",
 ) -> str:
-    """Создать тестовый черновик только в T-API песочнице.
+    """Создать черновик в выбранном контуре T-API.
 
-    Инструмент зарегистрирован только при точном sandbox base URL. В PROD его нет.
-    Черновик не подписывается и не отправляется.
+    В песочнице это тестовая запись без влияния на реальные данные. В production
+    черновик появится в настоящем кабинете Т-Бизнеса, но не будет подписан или
+    отправлен. Для production токену нужен отдельный scope создания черновиков.
     """
-    if not SANDBOX_MODE:
-        raise RuntimeError("Создание черновика доступно только в профиле T-API песочницы.")
     _validate_account_number(account_number)
     if not re.fullmatch(r"\d{20}", recipient_account):
         raise ValueError("Счёт получателя должен содержать 20 цифр.")
@@ -455,12 +448,12 @@ async def create_payment_draft(
         body["date"] = execution_date
 
     result = await _request("POST", "/v1/payment/create", body=body)
-    return _json(
-        {
-            "notice": "Тестовый черновик создан в T-API песочнице; реальный счёт не затронут.",
-            "result": result,
-        }
+    notice = (
+        "Тестовый черновик создан в T-API песочнице; реальные данные не затронуты."
+        if SANDBOX_MODE
+        else "Черновик создан в production-кабинете; он не подписан и не отправлен."
     )
+    return _json({"notice": notice, "result": result})
 
 
 @mcp.tool()
