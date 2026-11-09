@@ -2,14 +2,17 @@
 
 Локальный MCP-сервер для своего расчётного счёта ИП в Т-Бизнесе. Сервер работает по stdio и обращается к официальному T-API напрямую. Токен не передаётся модели как параметр инструмента и не записывается в файлы проекта. HTTPS-сертификаты проверяются через системное хранилище сертификатов.
 
-## Возможности первой версии
+## Инструменты
 
-- `list_accounts` — сведения о расчётных и инвестиционных счетах компании.
+- `list_accounts` — расчётные и инвестиционные счета, их статусы и остатки.
+- `get_company_info` — сведения и реквизиты компании.
 - `get_statement` — операции за период, фильтры по статусу/категории/ИНН и постраничная выдача через `nextCursor`.
-- `create_payment_draft` — создать черновик обычного платежного поручения. Черновик появится в банковском кабинете, но инструмент не подписывает и не отправляет платеж.
-- `get_payment_draft_status` — получить статусы черновиков по `documentId`.
+- `summarize_statement` — сводка за период: зачисления, списания, чистое изменение и суммы по категориям.
+- `get_payment_document` — PDF-подтверждение исполненной операции из выписки.
+- `get_payment_draft_status` — статус документа по `documentId`.
+- `create_payment_draft` — тестовый черновик доступен только в sandbox профиле; в production профиль этот инструмент не регистрируется.
 
-MCP не содержит инструмента отправки денег, оплаты реестров, операций с картами, налоговых платежей или безакцептного списания.
+Production профиль предназначен только для чтения. Он не содержит методов создания, подписания или отправки платежей.
 
 ## Требования
 
@@ -19,7 +22,7 @@ MCP не содержит инструмента отправки денег, о
 
 ## Настройка на macOS
 
-Выпустите отдельный T-API токен в личном кабинете Т-Бизнеса: доступ к информации о счетах компании, операциям по счетам и (если нужны черновики) созданию черновиков платежей. Не добавляйте права на совершение платежей.
+Для production профиля выпустите T-API токен с правами только на чтение счетов и операций. Создание черновиков отключено в production профиле.
 
 Сохраните токен в macOS Keychain. Команда запросит значение интерактивно и не поместит его в историю оболочки:
 
@@ -34,6 +37,14 @@ cd /path/to/tbank_business_mcp
 uv sync
 chmod +x scripts/run-with-keychain.sh
 ```
+
+Для безопасной разработки подключите тестовую песочницу. Ей не нужен личный токен: скрипт использует публичный `TBankSandboxToken` и адрес `https://business.tbank.ru/openapi/sandbox/api`.
+
+```bash
+codex mcp add tbank-business-sandbox -- /bin/sh /path/to/tbank_business_mcp/scripts/run-sandbox.sh
+```
+
+В песочнице можно проверить контракты и поведение методов; её ответы тестовые и могут меняться. Запросы к ней не влияют на реальные данные. Не используйте значения из песочницы как реальные банковские данные.
 
 Для Codex добавьте в `~/.codex/config.toml`:
 
@@ -76,11 +87,10 @@ security add-generic-password -U -a "$USER" -s tbank-business-api-token -w
 
 Передаются в ISO 8601, например `2026-11-01T00:00:00Z`. `to_date` не включается в интервал. Если ответ содержит `nextCursor`, передайте его в следующий вызов `get_statement` как `cursor`. Максимум T-API — 5000 операций на страницу.
 
-## Т-Банк API
+## Контуры и ограничения
 
-- API base URL по умолчанию: `https://business.tbank.ru/openapi/api`
-- Токен: Bearer API Token
-- Для платёжного черновика требуется отдельный scope создания черновиков. Т-Банк ограничивает этот метод 10 запросами в секунду.
-- Создание черновика — действие в банковском кабинете, несмотря на то что оно не переводит деньги. Проверяйте данные перед вызовом.
+- Production base URL: `https://business.tbank.ru/openapi/api`; Bearer-токен из Keychain.
+- Sandbox base URL: `https://business.tbank.ru/openapi/sandbox/api`; публичный тестовый Bearer-токен.
+- Создание черновика доступно только в sandbox и не подписывает/не отправляет платёж.
 
-Документация: [T-API](https://developer.tbank.ru/docs/api/t-api), [счета и выписки](https://developer.tbank.ru/docs/api/scheta-i-vipiski), [черновик платежа](https://developer.tbank.ru/docs/api/post-api-v-1-payment-create), [статусы платежных документов](https://developer.tbank.ru/docs/api/payment-status).
+Документация: [T-API](https://developer.tbank.ru/docs/api/t-api), [песочница](https://developer.tbank.ru/docs/intro/other/sandbox), [счета и выписки](https://developer.tbank.ru/docs/api/scheta-i-vipiski), [подтверждающий документ](https://developer.tbank.ru/docs/api/get-api-v-1-payment-document), [информация о компании](https://developer.tbank.ru/docs/api/get-api-v-1-company), [черновик платежа](https://developer.tbank.ru/docs/api/post-api-v-1-payment-create), [статусы платежных документов](https://developer.tbank.ru/docs/api/payment-status).
