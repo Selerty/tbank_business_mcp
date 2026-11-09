@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import ssl
 import uuid
 from datetime import datetime
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+import truststore
 from mcp.server.fastmcp import FastMCP
 
 
@@ -47,7 +49,12 @@ def _client() -> httpx.AsyncClient:
             "TBANK_API_TOKEN не задан. Настройте его в окружении MCP-сервера."
         )
 
-    verify: bool | str = os.getenv("TBANK_CA_BUNDLE") or True
+    ca_bundle = os.getenv("TBANK_CA_BUNDLE")
+    verify: bool | str | ssl.SSLContext = (
+        ca_bundle
+        if ca_bundle
+        else truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    )
     return httpx.AsyncClient(
         base_url=API_BASE_URL,
         headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
